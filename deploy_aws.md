@@ -52,20 +52,67 @@ Visit: `http://your-instance-ip`
 
 ---
 
-## 🔒 Optional: Add SSL (HTTPS)
+## 🔒 4. Link Custom Domain (rojgar.site) & Add SSL
 
-For a professional site, you should add a domain and SSL. You can use **Nginx** and **Certbot** on the same instance to proxy traffic to the Docker container.
+To make your app accessible at `https://rojgar.site`, follow these steps:
 
-### Simple Nginx Config:
+### Step A: DNS Configuration (Where you bought the domain)
+1. Go to your domain registrar (GoDaddy, Hostinger, Cloudflare, etc.).
+2. Go to **DNS Settings**.
+3. Add a new **A Record**:
+   - **Name/Host**: `@`
+   - **Value/Points To**: `<Your-AWS-Public-IP>`
+   - **TTL**: Auto or 1 hour
+4. Add another **A Record** for `www` (Optional but recommended):
+   - **Name/Host**: `www`
+   - **Value/Points To**: `<Your-AWS-Public-IP>`
+
+### Step B: Update Docker Compose
+We need Docker to run on an internal port so Nginx can handle the public ports (80 and 443).
+Edit `docker-compose.yml` on your server to map `8000:8000` instead of `80:8000`.
+
+### Step C: Install Nginx & Certbot on AWS
+Run these commands on your EC2 instance:
+```bash
+sudo apt update
+sudo apt install -y nginx certbot python3-certbot-nginx
+```
+
+### Step D: Configure Nginx
+Create a new Nginx config file for your domain:
+```bash
+sudo nano /etc/nginx/sites-available/rojgar.site
+```
+Paste this configuration inside:
 ```nginx
 server {
     listen 80;
-    server_name yourdomain.com;
+    server_name rojgar.site www.rojgar.site;
 
     location / {
-        proxy_pass http://localhost:80;
+        proxy_pass http://127.0.0.0:8000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
 ```
+Save and exit (`Ctrl+X`, then `Y`, then `Enter`).
+
+Enable the configuration:
+```bash
+sudo ln -s /etc/nginx/sites-available/rojgar.site /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl restart nginx
+```
+
+### Step E: Generate Free SSL Certificate (HTTPS)
+Run Certbot to secure your site:
+```bash
+sudo certbot --nginx -d rojgar.site -d www.rojgar.site
+```
+Follow the prompts, and Certbot will automatically configure HTTPS for you.
+
+Congratulations! Your app is now live at `https://rojgar.site` 🚀
+
