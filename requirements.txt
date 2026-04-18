@@ -1,0 +1,8 @@
+python-telegram-bot
+yt-dlp
+fastapi
+uvicorn
+python-dotenv
+slowapi
+aiofiles
+jinja2

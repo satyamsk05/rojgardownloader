@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+downloads/
+stats.json
+.agent/
+.gemini/
+.planning/
+graphify-out/
+.DS_Store
