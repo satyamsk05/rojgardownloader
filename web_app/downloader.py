@@ -45,6 +45,25 @@ class Downloader:
                 print(f"Error downloading: {e}")
                 return None
 
+    def get_stream_info(self, url):
+        ydl_opts = {
+            'format': 'best[ext=mp4]/best', # Get pre-merged video+audio
+            'quiet': True,
+            'no_warnings': True,
+        }
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            try:
+                info = ydl.extract_info(url, download=False)
+                return {
+                    'title': info.get('title', 'Video'),
+                    'stream_url': info.get('url'),
+                    'ext': info.get('ext', 'mp4'),
+                    'platform': info.get('extractor_key', 'Unknown')
+                }
+            except Exception as e:
+                print(f"Error fetching stream info: {e}")
+                return None
+
 # Async wrapper for bot usage
 async def async_get_info(url):
     loop = asyncio.get_event_loop()
@@ -55,3 +74,8 @@ async def async_download(url):
     loop = asyncio.get_event_loop()
     with ThreadPoolExecutor() as pool:
         return await loop.run_in_executor(pool, Downloader().download, url)
+
+async def async_get_stream_info(url):
+    loop = asyncio.get_event_loop()
+    with ThreadPoolExecutor() as pool:
+        return await loop.run_in_executor(pool, Downloader().get_stream_info, url)

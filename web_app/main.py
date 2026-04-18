@@ -1,13 +1,14 @@
 from fastapi import FastAPI, Request, BackgroundTasks, HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, FileResponse, Response
+from fastapi.responses import HTMLResponse, FileResponse, Response, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 import sys
 import os
 import httpx
+import urllib.parse
 
-from .downloader import async_get_info, async_download
+from .downloader import async_get_info, async_download, async_get_stream_info
 from .stats import log_download
 
 app = FastAPI()
@@ -36,21 +37,36 @@ async def get_video_info(req: DownloadRequest):
 
 @app.post("/api/download")
 async def download_video(req: DownloadRequest, background_tasks: BackgroundTasks):
-    info = await async_get_info(req.url)
-    if not info:
-        return {"error": "Failed to fetch info"}
+    stream_info = await async_get_stream_info(req.url)
+    if not stream_info or not stream_info.get('stream_url'):
+        return {"error": "Failed to extract stream URL"}
     
-    file_path = await async_download(req.url)
-    if file_path and os.path.exists(file_path):
-        log_download(info['platform'], "web_user")
-        # Add background task to delete file after sending
-        background_tasks.add_task(cleanup_file, file_path)
-        return FileResponse(
-            path=file_path,
-            filename=os.path.basename(file_path),
-            media_type='application/octet-stream'
-        )
-    return {"error": "Download failed"}
+    stream_url = stream_info['stream_url']
+    title = stream_info.get('title', 'video')
+    ext = stream_info.get('ext', 'mp4')
+    platform = stream_info.get('platform', 'Unknown')
+    
+    safe_title = "".join([c for c in title if c.isalpha() or c.isdigit() or c==' ']).rstrip()
+    filename = f"{safe_title}.{ext}"
+
+    log_download(platform, "web_user")
+
+    async def stream_generator():
+        async with httpx.AsyncClient() as client:
+            async with client.stream("GET", stream_url) as response:
+                async for chunk in response.aiter_bytes(chunk_size=1024 * 1024): # 1MB chunks
+                    yield chunk
+
+    encoded_filename = urllib.parse.quote(filename)
+    headers = {
+        'Content-Disposition': f'attachment; filename*=UTF-8\'\'{encoded_filename}'
+    }
+
+    return StreamingResponse(
+        stream_generator(),
+        media_type='application/octet-stream',
+        headers=headers
+    )
 
 @app.get("/health")
 async def health_check():
