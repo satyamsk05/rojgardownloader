@@ -152,3 +152,9 @@ async def proxy_image(url: str):
             return Response(content=resp.content, media_type=resp.headers.get("Content-Type", "image/jpeg"))
     except Exception:
         raise HTTPException(status_code=500)
+
+@app.get("/{page_name}", response_class=HTMLResponse)
+async def serve_page(request: Request, page_name: str):
+    if os.path.exists(f"web_app/static/{page_name}.html"):
+        return templates.TemplateResponse(request, f"{page_name}.html", {"request": request})
+    raise HTTPException(status_code=404, detail="Page not found")
