@@ -51,8 +51,10 @@ async def download_video(req: DownloadRequest, background_tasks: BackgroundTasks
 
     log_download(platform, "web_user")
 
+    http_headers = stream_info.get('http_headers', {})
+    
     async def stream_generator():
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=None, headers=http_headers) as client:
             async with client.stream("GET", stream_url) as response:
                 async for chunk in response.aiter_bytes(chunk_size=1024 * 1024): # 1MB chunks
                     yield chunk

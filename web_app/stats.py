@@ -2,8 +2,11 @@ import json
 import os
 from datetime import datetime
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-STATS_FILE = os.path.join(BASE_DIR, "stats.json")
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_DIR = os.path.join(BASE_DIR, "data")
+if not os.path.exists(DATA_DIR):
+    os.makedirs(DATA_DIR)
+STATS_FILE = os.path.join(DATA_DIR, "stats.json")
 
 def load_stats():
     if not os.path.exists(STATS_FILE):

@@ -58,7 +58,8 @@ class Downloader:
                     'title': info.get('title', 'Video'),
                     'stream_url': info.get('url'),
                     'ext': info.get('ext', 'mp4'),
-                    'platform': info.get('extractor_key', 'Unknown')
+                    'platform': info.get('extractor_key', 'Unknown'),
+                    'http_headers': info.get('http_headers', {})
                 }
             except Exception as e:
                 print(f"Error fetching stream info: {e}")

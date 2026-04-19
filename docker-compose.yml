@@ -5,7 +5,7 @@ services:
       - "80:8000"
     volumes:
       - ./downloads:/app/downloads
-      - ./web_app/stats.json:/app/web_app/stats.json
+      - ./data:/app/data
     restart: always
     environment:
       - PORT=8000
