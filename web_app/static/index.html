@@ -215,24 +215,24 @@
         </div>
 
         <!-- Results Preview -->
-        <div id="preview" class="max-w-5xl mx-auto mb-40">
-            <div class="bg-white rounded-[2rem] md:rounded-[4rem] p-6 md:p-12 lg:p-16 relative overflow-hidden border border-black/5 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.05)]">
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 md:gap-20 items-center">
+        <div id="preview" class="max-w-4xl mx-auto mb-20">
+            <div class="bg-white rounded-3xl md:rounded-[3rem] p-6 md:p-10 relative overflow-hidden border border-black/5 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)]">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
                     <div class="relative group">
-                        <div class="rounded-[3rem] overflow-hidden aspect-square shadow-2xl border border-black/5">
-                            <img id="thumb" class="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" src="" alt="Thumbnail">
+                        <div class="rounded-2xl overflow-hidden aspect-video shadow-xl border border-black/5 bg-black/5">
+                            <img id="thumb" class="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" src="" alt="Thumbnail">
                         </div>
                     </div>
-                    <div class="space-y-12 text-left">
-                        <div class="space-y-6">
-                            <h3 id="title" class="text-4xl md:text-5xl font-black leading-tight tracking-tight text-on-surface"></h3>
-                            <div id="meta" class="flex flex-wrap gap-4">
+                    <div class="space-y-6 text-left">
+                        <div class="space-y-4">
+                            <h3 id="title" class="text-2xl md:text-3xl font-black leading-tight tracking-tight text-on-surface line-clamp-3"></h3>
+                            <div id="meta" class="flex flex-wrap gap-2">
                                 <!-- Meta tags -->
                             </div>
                             <!-- Format Selection -->
                             <div class="pt-2">
                                 <label class="text-[10px] font-black uppercase tracking-[0.2em] text-black/40 block mb-2">Select Format</label>
-                                <select id="format-select" class="w-full bg-black/5 border-none rounded-2xl px-6 py-4 text-black font-semibold focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer">
+                                <select id="format-select" class="w-full bg-black/5 border-none rounded-xl px-4 py-3 text-sm text-black font-semibold focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer">
                                     <option value="auto">Best Quality (Auto)</option>
                                     <option value="best[ext=mp4][protocol!~=dash]/best[protocol!~=dash]/best">Instagram Best (No-DASH)</option>
                                     <option value="best[height<=720][ext=mp4]/best[height<=720]">720p Max</option>
@@ -241,8 +241,8 @@
                                 </select>
                             </div>
                         </div>
-                        <button id="dl-btn" class="w-full bg-black text-white py-10 rounded-[2.5rem] font-black text-3xl shadow-[0_30px_60px_-15px_rgba(0,0,0,0.2)] hover:bg-primary transition-all flex items-center justify-center gap-5">
-                            <span class="material-symbols-outlined text-4xl text-white">download_done</span>
+                        <button id="dl-btn" class="w-full bg-black text-white py-4 md:py-5 rounded-full font-black text-lg shadow-[0_20px_40px_-10px_rgba(0,0,0,0.2)] hover:bg-primary transition-all flex items-center justify-center gap-3">
+                            <span class="material-symbols-outlined text-2xl text-white">download</span>
                             DOWNLOAD HD
                         </button>
                     </div>

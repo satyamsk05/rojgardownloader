@@ -30,10 +30,10 @@ async function fetchInfo() {
             // Refined meta badges (Light Mode)
             const durationText = `${Math.floor(data.duration / 60)}m ${data.duration % 60}s`;
             document.getElementById('meta').innerHTML = `
-                <div class="px-6 py-3 bg-black/5 backdrop-blur-md rounded-2xl text-[10px] font-black flex items-center gap-2 border border-black/5 uppercase tracking-[0.2em] text-black/40">
+                <div class="px-4 py-2.5 bg-black/5 backdrop-blur-md rounded-xl text-[10px] font-black flex items-center gap-2 border border-black/5 uppercase tracking-[0.2em] text-black/40">
                     <span class="material-symbols-outlined text-sm">account_circle</span> ${data.uploader}
                 </div>
-                <div class="px-6 py-3 bg-black/5 backdrop-blur-md rounded-2xl text-[10px] font-black flex items-center gap-2 border border-black/5 uppercase tracking-[0.2em] text-black/40">
+                <div class="px-4 py-2.5 bg-black/5 backdrop-blur-md rounded-xl text-[10px] font-black flex items-center gap-2 border border-black/5 uppercase tracking-[0.2em] text-black/40">
                     <span class="material-symbols-outlined text-sm">schedule</span> ${durationText}
                 </div>
             `;
