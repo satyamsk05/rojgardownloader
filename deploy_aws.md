@@ -50,6 +50,19 @@ sudo usermod -aG docker $USER
 The app will now be running on port 80 of your instance's public IP.
 Visit: `http://your-instance-ip`
 
+## 4. Set up Auto-Updates for yt-dlp (Required)
+
+YouTube and Instagram frequently change their internal APIs. To prevent the downloader from breaking, set up a weekly auto-update for `yt-dlp` using cron.
+
+```bash
+crontab -e
+```
+Add this line at the bottom to update the library every Monday at 3 AM:
+```bash
+0 3 * * 1 docker exec rojgardownloader_web_1 pip install -U yt-dlp
+```
+Save and exit.
+
 ---
 
 ## 🔒 4. Link Custom Domain (rojgar.site) & Add SSL
@@ -90,7 +103,7 @@ server {
     server_name rojgar.site www.rojgar.site;
 
     location / {
-        proxy_pass http://127.0.0.0:8000;
+        proxy_pass http://127.0.0.1:8000;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

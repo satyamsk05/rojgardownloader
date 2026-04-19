@@ -45,9 +45,9 @@ class Downloader:
                 print(f"Error downloading: {e}")
                 return None
 
-    def get_stream_info(self, url):
+    def get_stream_info(self, url, format_id='best[ext=mp4]/best'):
         ydl_opts = {
-            'format': 'best[ext=mp4]/best', # Get pre-merged video+audio
+            'format': format_id,
             'quiet': True,
             'no_warnings': True,
         }
@@ -67,16 +67,16 @@ class Downloader:
 
 # Async wrapper for bot usage
 async def async_get_info(url):
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     with ThreadPoolExecutor() as pool:
         return await loop.run_in_executor(pool, Downloader().get_info, url)
 
 async def async_download(url):
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     with ThreadPoolExecutor() as pool:
         return await loop.run_in_executor(pool, Downloader().download, url)
 
-async def async_get_stream_info(url):
-    loop = asyncio.get_event_loop()
+async def async_get_stream_info(url, format_id='best[ext=mp4]/best'):
+    loop = asyncio.get_running_loop()
     with ThreadPoolExecutor() as pool:
-        return await loop.run_in_executor(pool, Downloader().get_stream_info, url)
+        return await loop.run_in_executor(pool, Downloader().get_stream_info, url, format_id)

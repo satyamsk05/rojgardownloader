@@ -118,6 +118,9 @@
     </style>
 </head>
 <body class="selection:bg-primary/10 selection:text-primary">
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-24 left-1/2 -translate-x-1/2 z-[100] flex flex-col gap-3 pointer-events-none"></div>
+
     <div class="bg-canvas"></div>
     <div class="orb orb-pink"></div>
     <div class="orb orb-blue"></div>
@@ -222,6 +225,16 @@
                             <div id="meta" class="flex flex-wrap gap-4">
                                 <!-- Meta tags -->
                             </div>
+                            <!-- Format Selection -->
+                            <div class="pt-2">
+                                <label class="text-[10px] font-black uppercase tracking-[0.2em] text-black/40 block mb-2">Select Format</label>
+                                <select id="format-select" class="w-full bg-black/5 border-none rounded-2xl px-6 py-4 text-black font-semibold focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer">
+                                    <option value="best[ext=mp4]/best">Best Quality (Video + Audio)</option>
+                                    <option value="bestvideo[height<=1080]+bestaudio/best[height<=1080]">1080p (If available)</option>
+                                    <option value="bestvideo[height<=720]+bestaudio/best[height<=720]">720p (If available)</option>
+                                    <option value="bestaudio[ext=m4a]/bestaudio/best">Audio Only (M4A)</option>
+                                </select>
+                            </div>
                         </div>
                         <button id="dl-btn" class="w-full bg-black text-white py-10 rounded-[2.5rem] font-black text-3xl shadow-[0_30px_60px_-15px_rgba(0,0,0,0.2)] hover:bg-primary transition-all flex items-center justify-center gap-5">
                             <span class="material-symbols-outlined text-4xl text-white">download_done</span>
@@ -229,6 +242,14 @@
                         </button>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Download History -->
+        <div id="history-section" class="max-w-5xl mx-auto mb-40 hidden">
+            <h4 class="text-[10px] font-black uppercase tracking-[0.4em] text-black/20 mb-8 text-center">Recent Curations</h4>
+            <div id="history-list" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- History items will be injected here -->
             </div>
         </div>
 

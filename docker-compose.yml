@@ -2,7 +2,7 @@ services:
   web:
     build: .
     ports:
-      - "80:8000"
+      - "8000:8000"
     volumes:
       - ./downloads:/app/downloads
       - ./data:/app/data

@@ -3,15 +3,21 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse, Response, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 import sys
 import os
 import httpx
 import urllib.parse
 
 from .downloader import async_get_info, async_download, async_get_stream_info
-from .stats import log_download
+from .stats import log_download, STATS_FILE
 
+limiter = Limiter(key_func=get_remote_address)
 app = FastAPI()
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="web_app/static"), name="static")
@@ -19,6 +25,7 @@ templates = Jinja2Templates(directory="web_app/static")
 
 class DownloadRequest(BaseModel):
     url: str
+    format_id: str = "best[ext=mp4]/best"
 
 def cleanup_file(path: str):
     if os.path.exists(path):
@@ -29,15 +36,17 @@ async def read_root(request: Request):
     return templates.TemplateResponse(request, "index.html", {"request": request})
 
 @app.post("/api/info")
-async def get_video_info(req: DownloadRequest):
+@limiter.limit("15/minute")
+async def get_video_info(request: Request, req: DownloadRequest):
     info = await async_get_info(req.url)
     if info:
         return info
     return {"error": "Could not fetch info"}
 
 @app.post("/api/download")
-async def download_video(req: DownloadRequest, background_tasks: BackgroundTasks):
-    stream_info = await async_get_stream_info(req.url)
+@limiter.limit("5/minute")
+async def download_video(request: Request, req: DownloadRequest, background_tasks: BackgroundTasks):
+    stream_info = await async_get_stream_info(req.url, req.format_id)
     if not stream_info or not stream_info.get('stream_url'):
         return {"error": "Failed to extract stream URL"}
     
@@ -49,7 +58,8 @@ async def download_video(req: DownloadRequest, background_tasks: BackgroundTasks
     safe_title = "".join([c for c in title if c.isalpha() or c.isdigit() or c==' ']).rstrip()
     filename = f"{safe_title}.{ext}"
 
-    log_download(platform, "web_user")
+    # Use background tasks to not block the stream response creation
+    background_tasks.add_task(log_download, platform, "web_user")
 
     http_headers = stream_info.get('http_headers', {})
     
@@ -69,6 +79,16 @@ async def download_video(req: DownloadRequest, background_tasks: BackgroundTasks
         media_type='application/octet-stream',
         headers=headers
     )
+
+@app.get("/api/stats")
+async def get_stats():
+    import json
+    import aiofiles
+    if not os.path.exists(STATS_FILE):
+        return {"error": "No stats found"}
+    async with aiofiles.open(STATS_FILE, "r") as f:
+        content = await f.read()
+        return json.loads(content)
 
 @app.get("/health")
 async def health_check():
