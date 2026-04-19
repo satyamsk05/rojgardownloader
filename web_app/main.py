@@ -63,10 +63,25 @@ async def download_video(
     background_tasks.add_task(log_download, platform, "web_user")
 
     # ── PATH A: Direct HTTPS stream available ──────────────────────────────────
-    # Redirect browser straight to CDN — nothing passes through our server at all.
-    # Chrome downloads directly with native real-time progress bar.
+    # Proxy the stream through our server using httpx to force a file download.
+    # This keeps disk usage at 0 while ensuring it actually downloads instead of playing in a new tab.
     if not needs_server and stream_url:
-        return RedirectResponse(url=stream_url, status_code=302)
+        ext = 'mp4'
+        filename = f"{safe_title}.{ext}"
+        encoded_filename = urllib.parse.quote(filename)
+        headers = {'Content-Disposition': f'attachment; filename*=UTF-8\'\'{encoded_filename}'}
+        
+        async def httpx_stream():
+            async with httpx.AsyncClient() as client:
+                async with client.stream("GET", stream_url, headers=http_headers) as response:
+                    async for chunk in response.aiter_bytes(chunk_size=1024 * 1024):
+                        yield chunk
+                        
+        return StreamingResponse(
+            httpx_stream(), 
+            media_type='application/octet-stream', 
+            headers=headers
+        )
 
     # ── PATH B: HLS / DASH / merge needed ─────────────────────────────────────
     # Use yt-dlp subprocess piped to stdout → StreamingResponse.
