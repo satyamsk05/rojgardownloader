@@ -96,6 +96,7 @@ async def download_video(
         '-f', resolved_fmt,
         '--merge-output-format', 'mp4',
         '-o', '-',                  # pipe output to stdout
+        '--downloader-args', 'ffmpeg:-movflags frag_keyframe+empty_moov', # Required for piping MP4 streams
         '--no-playlist',
         '--quiet',
         *cookies_args,

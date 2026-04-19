@@ -35,6 +35,7 @@ def _base_yt_opts():
         'quiet': True,
         'no_warnings': True,
         'nocheckcertificate': True,
+        'age_limit': 99,
     }
     if os.path.exists(COOKIES):
         opts['cookiefile'] = COOKIES
