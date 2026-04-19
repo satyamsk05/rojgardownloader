@@ -229,9 +229,10 @@
                             <div class="pt-2">
                                 <label class="text-[10px] font-black uppercase tracking-[0.2em] text-black/40 block mb-2">Select Format</label>
                                 <select id="format-select" class="w-full bg-black/5 border-none rounded-2xl px-6 py-4 text-black font-semibold focus:ring-2 focus:ring-primary/20 appearance-none cursor-pointer">
-                                    <option value="best[ext=mp4]/best">Best Quality (Video + Audio)</option>
-                                    <option value="bestvideo[height<=1080]+bestaudio/best[height<=1080]">1080p (If available)</option>
-                                    <option value="bestvideo[height<=720]+bestaudio/best[height<=720]">720p (If available)</option>
+                                    <option value="auto">Best Quality (Auto)</option>
+                                    <option value="best[ext=mp4][protocol!~=dash]/best[protocol!~=dash]/best">Instagram Best (No-DASH)</option>
+                                    <option value="best[height<=720][ext=mp4]/best[height<=720]">720p Max</option>
+                                    <option value="best[height<=480][ext=mp4]/best[height<=480]">480p (Faster)</option>
                                     <option value="bestaudio[ext=m4a]/bestaudio/best">Audio Only (M4A)</option>
                                 </select>
                             </div>
@@ -335,6 +336,6 @@
         </div>
     </footer>
 
-    <script src="/static/app.js"></script>
+    <script src="/static/app.js?v=4.5"></script>
 </body>
 </html>

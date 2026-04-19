@@ -1,17 +1,19 @@
+import sys
+import os
+import asyncio
+import urllib.parse
+
 from fastapi import FastAPI, Request, BackgroundTasks, HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, FileResponse, Response, StreamingResponse
+from fastapi.responses import HTMLResponse, Response, StreamingResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
-import sys
-import os
 import httpx
-import urllib.parse
 
-from .downloader import async_get_info, async_download, async_get_stream_info
+from .downloader import async_get_info, async_get_stream_info
 from .stats import log_download, STATS_FILE
 
 limiter = Limiter(key_func=get_remote_address)
@@ -19,17 +21,12 @@ app = FastAPI()
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# Mount static files
 app.mount("/static", StaticFiles(directory="web_app/static"), name="static")
 templates = Jinja2Templates(directory="web_app/static")
 
 class DownloadRequest(BaseModel):
     url: str
-    format_id: str = "best[ext=mp4]/best"
-
-def cleanup_file(path: str):
-    if os.path.exists(path):
-        os.remove(path)
+    format_id: str = "auto"
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root(request: Request):
@@ -43,52 +40,87 @@ async def get_video_info(request: Request, req: DownloadRequest):
         return info
     return {"error": "Could not fetch info"}
 
-@app.post("/api/download")
+@app.get("/api/download")
 @limiter.limit("5/minute")
-async def download_video(request: Request, req: DownloadRequest, background_tasks: BackgroundTasks):
-    stream_info = await async_get_stream_info(req.url, req.format_id)
-    if not stream_info or not stream_info.get('stream_url'):
-        return {"error": "Failed to extract stream URL"}
-    
-    stream_url = stream_info['stream_url']
-    title = stream_info.get('title', 'video')
-    ext = stream_info.get('ext', 'mp4')
-    platform = stream_info.get('platform', 'Unknown')
-    
-    safe_title = "".join([c for c in title if c.isalpha() or c.isdigit() or c==' ']).rstrip()
-    filename = f"{safe_title}.{ext}"
+async def download_video(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    url: str,
+    format_id: str = "auto"
+):
+    stream_info = await async_get_stream_info(url, format_id)
+    if not stream_info:
+        raise HTTPException(status_code=500, detail="Could not extract stream info")
 
-    # Use background tasks to not block the stream response creation
+    title = stream_info.get('title', 'video')
+    platform = stream_info.get('platform', 'Unknown')
+    needs_server = stream_info.get('needs_server', False)
+    stream_url = stream_info.get('stream_url')
+    http_headers = stream_info.get('http_headers', {})
+    resolved_fmt = stream_info.get('resolved_format_id', format_id)
+
+    safe_title = "".join([c for c in title if c.isalpha() or c.isdigit() or c == ' ']).rstrip()
     background_tasks.add_task(log_download, platform, "web_user")
 
-    http_headers = stream_info.get('http_headers', {})
-    
-    async def stream_generator():
-        async with httpx.AsyncClient(follow_redirects=True, timeout=None, headers=http_headers) as client:
-            async with client.stream("GET", stream_url) as response:
-                async for chunk in response.aiter_bytes(chunk_size=1024 * 1024): # 1MB chunks
-                    yield chunk
+    # ── PATH A: Direct HTTPS stream available ──────────────────────────────────
+    # Redirect browser straight to CDN — nothing passes through our server at all.
+    # Chrome downloads directly with native real-time progress bar.
+    if not needs_server and stream_url:
+        return RedirectResponse(url=stream_url, status_code=302)
 
+    # ── PATH B: HLS / DASH / merge needed ─────────────────────────────────────
+    # Use yt-dlp subprocess piped to stdout → StreamingResponse.
+    # Nothing is written to disk; data flows directly to the browser.
+    ext = 'mp4'
+    filename = f"{safe_title}.{ext}"
     encoded_filename = urllib.parse.quote(filename)
-    headers = {
-        'Content-Disposition': f'attachment; filename*=UTF-8\'\'{encoded_filename}'
-    }
+
+    cookies_args = ['--cookies', 'cookies.txt'] if os.path.exists('cookies.txt') else []
+    cmd = [
+        sys.executable, '-m', 'yt_dlp',
+        '-f', resolved_fmt,
+        '--merge-output-format', 'mp4',
+        '-o', '-',                  # pipe output to stdout
+        '--no-playlist',
+        '--quiet',
+        *cookies_args,
+        url,
+    ]
+
+    proc = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.DEVNULL,
+    )
+
+    async def stream_proc():
+        try:
+            while True:
+                chunk = await proc.stdout.read(512 * 1024)
+                if not chunk:
+                    break
+                yield chunk
+        finally:
+            try:
+                proc.kill()
+            except Exception:
+                pass
 
     return StreamingResponse(
-        stream_generator(),
+        stream_proc(),
         media_type='application/octet-stream',
-        headers=headers
+        headers={
+            'Content-Disposition': f"attachment; filename*=UTF-8''{encoded_filename}",
+        }
     )
 
 @app.get("/api/stats")
 async def get_stats():
-    import json
-    import aiofiles
+    import json, aiofiles
     if not os.path.exists(STATS_FILE):
         return {"error": "No stats found"}
     async with aiofiles.open(STATS_FILE, "r") as f:
-        content = await f.read()
-        return json.loads(content)
+        return json.loads(await f.read())
 
 @app.get("/health")
 async def health_check():

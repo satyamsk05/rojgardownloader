@@ -37,17 +37,33 @@ async function fetchInfo() {
                     <span class="material-symbols-outlined text-sm">schedule</span> ${durationText}
                 </div>
             `;
+
+            // Populate format dropdown dynamically
+            const formatSelect = document.getElementById('format-select');
+            formatSelect.innerHTML = '<option value="auto">✨ Best Quality (Auto-detect)</option>';
+            if (data.formats && data.formats.length > 0) {
+                data.formats.forEach(f => {
+                    const mergeNote = f.needs_merge 
+                        ? ' ⚡ (server merge — slower)' 
+                        : ' 🔗 (direct stream — fast)';
+                    const opt = document.createElement('option');
+                    opt.value = f.format_id;
+                    opt.textContent = `${f.label}${mergeNote}`;
+                    formatSelect.appendChild(opt);
+                });
+                // Audio only
+                const audioOpt = document.createElement('option');
+                audioOpt.value = 'bestaudio[ext=m4a]/bestaudio/best';
+                audioOpt.textContent = '🎵 Audio Only (M4A) 🔗 direct';
+                formatSelect.appendChild(audioOpt);
+            }
             
             // Smooth scroll with offset
             setTimeout(() => {
                 const headerHeight = 150;
                 const elementPosition = preview.getBoundingClientRect().top;
                 const offsetPosition = elementPosition + window.pageYOffset - headerHeight;
-
-                window.scrollTo({
-                    top: offsetPosition,
-                    behavior: "smooth"
-                });
+                window.scrollTo({ top: offsetPosition, behavior: "smooth" });
             }, 100);
             
             // Set up download button
@@ -66,77 +82,38 @@ async function fetchInfo() {
 
 async function triggerDownload(url) {
     const dlBtn = document.getElementById('dl-btn');
-    const originalHtml = dlBtn.innerHTML;
     const formatId = document.getElementById('format-select').value;
     
-    dlBtn.innerHTML = '<span class="material-symbols-outlined animate-bounce">downloading</span> PROCESSING <span id="dl-progress"></span>';
+    // Build GET URL — browser handles download natively (shows Chrome download bar immediately)
+    const params = new URLSearchParams({ url, format_id: formatId });
+    const downloadUrl = `/api/download?${params.toString()}`;
+    
+    // Show brief loading state
+    const originalHtml = dlBtn.innerHTML;
+    dlBtn.innerHTML = '<span class="material-symbols-outlined animate-bounce">downloading</span> Starting...';
     dlBtn.disabled = true;
     
-    try {
-        const res = await fetch('/api/download', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({url, format_id: formatId})
-        });
-        
-        if (res.ok) {
-            let filename = "video.mp4";
-            const disposition = res.headers.get('content-disposition');
-            if (disposition && disposition.includes("filename*=UTF-8''")) {
-                filename = decodeURIComponent(disposition.split("filename*=UTF-8''")[1]);
-            }
-            
-            const contentLength = res.headers.get('content-length');
-            const total = contentLength ? parseInt(contentLength, 10) : 0;
-            let loaded = 0;
-            
-            const reader = res.body.getReader();
-            const chunks = [];
-            
-            while(true) {
-                const {done, value} = await reader.read();
-                if (done) break;
-                chunks.push(value);
-                loaded += value.length;
-                
-                if (total) {
-                    const percent = Math.round((loaded / total) * 100);
-                    document.getElementById('dl-progress').innerText = `(${percent}%)`;
-                } else {
-                    const mb = (loaded / (1024*1024)).toFixed(1);
-                    document.getElementById('dl-progress').innerText = `(${mb} MB)`;
-                }
-            }
-            
-            const blob = new Blob(chunks);
-            const downloadUrl = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = downloadUrl;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            
-            showToast("Curated successfully!");
-            saveToHistory(document.getElementById('title').innerText, document.getElementById('thumb').src, url);
-        } else {
-            showToast("Download failed. Try another link.", "error");
-        }
-    } catch (err) {
-        showToast("Server error during download.", "error");
-    } finally {
+    // Trigger native browser download
+    window.location.href = downloadUrl;
+    
+    showToast("Download started! Check Chrome's download bar ↓", "info");
+    saveToHistory(document.getElementById('title').innerText, document.getElementById('thumb').src, url);
+    
+    // Re-enable button after a moment
+    setTimeout(() => {
         dlBtn.innerHTML = originalHtml;
         dlBtn.disabled = false;
-    }
+    }, 3000);
 }
 
 // Toast Notifications
-function showToast(message, type = 'info') {
+function showToast(message, type = 'success') {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
-    const bg = type === 'error' ? 'bg-red-500' : 'bg-black';
+    const bg = type === 'error' ? 'bg-red-500' : type === 'info' ? 'bg-blue-600' : 'bg-black';
+    const icon = type === 'error' ? 'error' : type === 'info' ? 'info' : 'check_circle';
     toast.className = `${bg} text-white px-6 py-3 rounded-full text-sm font-semibold shadow-xl flex items-center gap-2 transform transition-all duration-300 -translate-y-full opacity-0`;
-    toast.innerHTML = `<span class="material-symbols-outlined text-sm">${type === 'error' ? 'error' : 'check_circle'}</span> ${message}`;
+    toast.innerHTML = `<span class="material-symbols-outlined text-sm">${icon}</span> ${message}`;
     container.appendChild(toast);
     
     requestAnimationFrame(() => {
